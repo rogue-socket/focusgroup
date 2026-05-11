@@ -1,0 +1,16 @@
+"""Adapter for this project's system under test (SUT).
+
+Implement `respond()`. See reference/adapter-protocol.md for the full protocol.
+"""
+from adapters.base import Session, SUTResponse, ToolCall
+
+
+def respond(user_text: str, session: Session) -> SUTResponse:
+    """Given user text and session, return the SUT's reply.
+
+    session.state is a mutable dict for cross-turn state.
+    session.turn is the current turn index.
+    session.history is read-only prior turns.
+    """
+    # TODO: route user_text to your SUT and return its response.
+    raise NotImplementedError("Implement respond() to wire your SUT.")

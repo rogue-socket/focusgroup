@@ -1,0 +1,32 @@
+id: <feature>-<persona-id>
+feature: <feature>
+persona: <persona-id>
+
+intention: |
+  <natural-language goal driving the persona for this run>
+
+initial_state:
+  # arbitrary key-values fed to adapter via session.state at turn 0
+  # example:
+  # user_authenticated: false
+  # locale: en-US
+
+requirements:
+  # list of requirement IDs from requirements.md
+  - F-001
+  # - S-001
+  # - I-001
+
+bounds:
+  max_turns: 20
+  cost_cap_usd: 0.50
+  stuck_detection_turns: 5
+  persona_can_declare_done: true
+
+success_criteria: |
+  <human-readable summary of what a successful run looks like>
+
+oracle_overrides:
+  # optional — per-requirement-ID config overrides
+  # F-001:
+  #   check: "state.x == True"

@@ -1,0 +1,100 @@
+# Requirements
+
+This document is the spine of focusgroup testing for this project. Every scenario
+references requirement IDs from here. Every failure traces back to one of these.
+
+Five types. Use the prefix shown.
+
+| Type | Prefix | What it means |
+|---|---|---|
+| Functional | `F-` | What the SUT must do |
+| Safety | `S-` | What the SUT must never do |
+| Performance | `P-` | Quantitative budgets |
+| IX | `I-` | How it should feel to use |
+| Correctness | `C-` | Factual or output-shape constraints |
+
+---
+
+## Functional requirements
+
+### F-001 — <one-line summary>
+
+**Description:** <what the SUT must do, observably>
+**Oracle:** state_check
+**Oracle config:**
+```yaml
+check: "<python expression against session state>"
+```
+**Notes:** <edge cases, what NOT to do>
+
+<!-- Add more F-### sections below. -->
+
+---
+
+## Safety requirements
+
+### S-001 — <one-line summary>
+
+**Description:** <what must never happen, even under pressure>
+**Oracle:** trace_invariant
+**Oracle config:**
+```yaml
+invariant: "no_event_with(type='tool_call', name='<banned_action>')"
+```
+**Notes:** <relevant context, jailbreak considerations>
+
+<!-- Add more S-### sections below. -->
+
+---
+
+## Performance requirements
+
+### P-001 — <one-line summary>
+
+**Description:** <quantitative budget>
+**Oracle:** trace_metric
+**Oracle config:**
+```yaml
+metric: "total_turns"        # or total_cost_usd, p95_latency_ms, total_tokens
+threshold: "<= 10"
+```
+**Notes:** <context>
+
+<!-- Add more P-### sections below. -->
+
+---
+
+## IX requirements
+
+### I-001 — <one-line summary>
+
+**Description:** <how the user should feel>
+**Oracle:** persona_debrief
+**Oracle config:**
+```yaml
+question: "felt_confused"    # debrief field
+expect: "no"
+```
+**Notes:** <context>
+
+<!-- Add more I-### sections below. -->
+
+---
+
+## Correctness requirements
+
+### C-001 — <one-line summary>
+
+**Description:** <factual or output constraint>
+**Oracle:** llm_judge
+**Oracle config:**
+```yaml
+rubric: |
+  <binary criterion: 1 if X, 0 otherwise>
+judge_model: "claude-sonnet-4-6"
+scope: "last_n_turns"
+n: 3
+```
+**Notes:** <why a judge is needed here vs. cheaper oracles>
+
+<!-- Add more C-### sections below. -->
