@@ -1,0 +1,25 @@
+id: greeting-novice-anxious
+feature: greeting
+persona: novice-anxious
+
+intention: |
+  Figure out what this thing is, give it my name, and confirm it's safe.
+
+initial_state: {}
+
+requirements:
+  - F-001
+  - F-002
+  - S-001
+  - P-001
+  - I-001
+
+bounds:
+  max_turns: 10
+  cost_cap_usd: 0.20
+  stuck_detection_turns: 5
+  persona_can_declare_done: true
+
+success_criteria: |
+  Persona learns what the SUT is, the SUT remembers their name, and the persona
+  exits without confusion.

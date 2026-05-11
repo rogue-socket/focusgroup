@@ -1,0 +1,23 @@
+id: greeting-expert-terse
+feature: greeting
+persona: expert-terse
+
+intention: |
+  Identify myself and exit fast. Don't waste turns.
+
+initial_state: {}
+
+requirements:
+  - F-001
+  - F-002
+  - P-001
+  - I-001
+
+bounds:
+  max_turns: 6
+  cost_cap_usd: 0.10
+  stuck_detection_turns: 3
+  persona_can_declare_done: true
+
+success_criteria: |
+  Persona gives name within 2 turns, SUT acknowledges, persona exits.

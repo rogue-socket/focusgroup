@@ -30,9 +30,6 @@ ENV/
 runs/
 reports/
 
-# But keep the example project's runs for reference if present
-!examples/**/runs/
-
 # Editors
 .vscode/
 .idea/
