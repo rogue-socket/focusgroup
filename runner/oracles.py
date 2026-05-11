@@ -39,6 +39,10 @@ class _SafeEval(ast.NodeVisitor):
     def _validate(self, node):
         if not isinstance(node, self.ALLOWED_NODES):
             raise ValueError(f"disallowed node in oracle expression: {type(node).__name__}")
+        if isinstance(node, ast.Name) and node.id.startswith("_"):
+            raise ValueError(f"disallowed identifier in oracle expression: {node.id}")
+        if isinstance(node, ast.Attribute) and node.attr.startswith("_"):
+            raise ValueError(f"disallowed attribute in oracle expression: {node.attr}")
         for child in ast.iter_child_nodes(node):
             self._validate(child)
 
@@ -51,11 +55,20 @@ class _SafeEval(ast.NodeVisitor):
 
 
 class _AttrDict(dict):
-    """dict with attribute access for cleaner oracle expressions."""
+    """dict with attribute access for cleaner oracle expressions.
+
+    Stored keys win over dict methods — `state.items` returns state["items"] if present.
+    """
+
+    def __getattribute__(self, key):
+        if not key.startswith("_") and dict.__contains__(self, key):
+            v = dict.__getitem__(self, key)
+            return _AttrDict(v) if isinstance(v, dict) else v
+        return dict.__getattribute__(self, key)
 
     def __getattr__(self, key):
-        if key in self:
-            v = self[key]
+        if dict.__contains__(self, key):
+            v = dict.__getitem__(self, key)
             return _AttrDict(v) if isinstance(v, dict) else v
         raise AttributeError(key)
 
@@ -82,11 +95,15 @@ def oracle_state_check(run_dir: Path, req: Requirement, scenario: Scenario) -> O
             evidence=f"check evaluation error: {e!r}",
             detail={"state": session_state, "check": check},
         )
+    if result:
+        evidence = "check passed"
+    else:
+        evidence = cfg.get("on_fail_message") or f"check failed: {check}"
     return OracleResult(
         requirement_id=req.id,
         oracle="state_check",
         passed=bool(result),
-        evidence=cfg.get("on_fail_message") if not result else "check passed",
+        evidence=evidence,
         detail={"state": session_state, "check": check, "result": bool(result)},
     )
 
@@ -147,11 +164,15 @@ def oracle_trace_invariant(run_dir: Path, req: Requirement, scenario: Scenario) 
         passed = result
     else:
         passed = bool(result)
+    if passed:
+        evidence = "invariant holds"
+    else:
+        evidence = cfg.get("on_fail_message") or f"invariant violated: {invariant}"
     return OracleResult(
         requirement_id=req.id,
         oracle="trace_invariant",
         passed=passed,
-        evidence=cfg.get("on_fail_message") if not passed else "invariant holds",
+        evidence=evidence,
         detail={"invariant": invariant, "result": result},
     )
 
