@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from adapters.base import Session, SUTResponse
+from runner import persona as persona_module
 from runner.persona import PersonaLLM
 from runner.persona_loop import run_loop
 from runner.schemas import Bounds, Persona, PersonaAxes, Scenario
@@ -67,3 +68,39 @@ def test_loop_respects_max_turns(tmp_path: Path):
     result = run_loop(scen, persona, _adapter, tmp_path, persona_llm=llm)
     # the stub exhausts and emits <<DONE>> after running out; if not, max_turns trips
     assert result.termination_reason in ("max_turns", "persona_declared_done")
+
+
+def test_persona_codex_turn(monkeypatch):
+    def fake_complete_json(prompt, schema, model=None):
+        assert "Generate the next user-side utterance" in prompt
+        return {"text": "I need help with this.", "done": False}
+
+    monkeypatch.setattr(persona_module.codex_client, "complete_json", fake_complete_json)
+    llm = PersonaLLM(_persona(), "get help", mode="codex")
+
+    turn = llm.next_turn(None, opening=True)
+
+    assert turn.text == "I need help with this."
+    assert not turn.done
+
+
+def test_persona_codex_debrief(monkeypatch):
+    def fake_complete_json(prompt, schema, model=None):
+        assert "post-session debrief" in prompt
+        return {
+            "accomplished_goal": "yes",
+            "accomplished_goal_reason": "it worked",
+            "stuck_points": "",
+            "pain_points": "",
+            "felt_trustworthy": "yes",
+            "felt_trustworthy_reason": "clear",
+            "would_return": "yes",
+            "one_change": "nothing",
+        }
+
+    monkeypatch.setattr(persona_module.codex_client, "complete_json", fake_complete_json)
+    llm = PersonaLLM(_persona(), "get help", mode="codex")
+
+    debrief = llm.debrief()
+
+    assert debrief["accomplished_goal"] == "yes"

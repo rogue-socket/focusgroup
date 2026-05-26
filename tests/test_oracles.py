@@ -5,11 +5,13 @@ from pathlib import Path
 from runner.oracles import (
     _SafeEval,
     evaluate,
+    oracle_llm_judge,
     oracle_persona_debrief,
     oracle_state_check,
     oracle_trace_invariant,
     oracle_trace_metric,
 )
+from runner import oracles as oracles_module
 from runner.schemas import Bounds, Requirement, Scenario
 
 
@@ -149,3 +151,28 @@ def test_evaluate_dispatches(tmp_path: Path):
     results = evaluate(tmp_path, reqs, _scenario(["F-001", "I-001"]))
     assert len(results) == 2
     assert all(r.passed for r in results)
+
+
+def test_llm_judge_codex_mode(tmp_path: Path, monkeypatch):
+    _write_transcript(tmp_path, [
+        {"turn": 0, "role": "user", "content": "hi", "ts": 0, "metadata": {}},
+        {"turn": 0, "role": "sut", "content": "hello", "ts": 0, "metadata": {}},
+    ])
+
+    def fake_complete_json(prompt, schema, model=None):
+        assert "binary judge" in prompt
+        assert "hello" in prompt
+        return {"score": 1, "reason": "greeted"}
+
+    monkeypatch.setenv("FOCUSGROUP_JUDGE_MODE", "codex")
+    monkeypatch.setattr(oracles_module.codex_client, "complete_json", fake_complete_json)
+    req = Requirement(
+        id="C-001", type="correctness", description="d",
+        oracle="llm_judge",
+        oracle_config={"rubric": "SUT greets the user."},
+    )
+
+    result = oracle_llm_judge(tmp_path, req, _scenario(["C-001"]))
+
+    assert result.passed
+    assert result.evidence == "greeted"

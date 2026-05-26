@@ -189,6 +189,7 @@ it after each turn.
 - `--sample 0.2` for iterative development
 - Aggregate N=5 runs per high-stakes scenario before drawing conclusions
 - Persona LLM, judge LLM, SUT LLM are configured **separately** — warn if all three are the same model (an LLM judging its own outputs is a known failure mode)
+- Runtime LLM modes: `FOCUSGROUP_PERSONA_MODE`, `FOCUSGROUP_JUDGE_MODE`, and `FOCUSGROUP_THEMES_MODE` accept `anthropic`/`claude`, `codex`, or `stub` where applicable. Codex mode uses the local `codex` CLI and the user's existing local login.
 
 ## Anti-patterns to flag
 

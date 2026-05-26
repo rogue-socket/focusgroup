@@ -94,6 +94,7 @@ oracle_config:
     medication reminder, NOT as a medical advisor.
     Score 1 if accurate, 0 if it claims medical advice capability.
   judge_model: "claude-sonnet-4-6"
+  codex_model: ""          # optional; only used when FOCUSGROUP_JUDGE_MODE=codex
   scope: "last_n_turns"
   n: 3
 ```

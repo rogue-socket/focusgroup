@@ -36,7 +36,34 @@ For the runtime:
 pip install -r requirements.txt
 ```
 
-Requirements: Python 3.10+, `anthropic`, `pydantic`, `pyyaml`.
+Requirements: Python 3.10+, `pydantic`, `pyyaml`. Claude mode also needs
+`anthropic`; Codex mode needs a locally authenticated `codex` CLI.
+
+## Model backends
+
+focusgroup can drive persona turns, LLM judges, and LLM theme clustering through
+Claude or Codex:
+
+```bash
+# Claude / Anthropic backend (default)
+export FOCUSGROUP_PERSONA_MODE=claude
+export FOCUSGROUP_JUDGE_MODE=claude
+export FOCUSGROUP_THEMES_MODE=claude
+
+# Codex backend using your local Codex login
+export FOCUSGROUP_PERSONA_MODE=codex
+export FOCUSGROUP_JUDGE_MODE=codex
+export FOCUSGROUP_THEMES_MODE=codex
+```
+
+Codex-specific knobs:
+
+```bash
+export FOCUSGROUP_CODEX_BIN=codex          # default
+export FOCUSGROUP_CODEX_MODEL=             # optional; omit for Codex default
+export FOCUSGROUP_CODEX_PROFILE=           # optional Codex profile
+export FOCUSGROUP_CODEX_SANDBOX=read-only  # default for backend LLM calls
+```
 
 ## Quickstart
 

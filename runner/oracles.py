@@ -13,6 +13,7 @@ import statistics
 from pathlib import Path
 from typing import Any, Callable
 
+from runner import codex_client
 from runner.schemas import OracleResult, Requirement, Scenario
 from runner.transcript import read_state, read_trace, read_turns
 
@@ -325,17 +326,44 @@ def oracle_llm_judge(run_dir: Path, req: Requirement, scenario: Scenario) -> Ora
         selected = turns[-n*2:]
 
     transcript_text = "\n".join(f"{t.role}: {t.content}" for t in selected)
+    prompt = (
+        "You are a binary judge for a conversational AI test. "
+        "Read the transcript, then apply the rubric. "
+        "Reply with JSON ONLY: {\"score\": 0 or 1, \"reason\": \"...\"}."
+        f"\n\nRubric:\n{rubric}\n\nTranscript:\n{transcript_text}"
+    )
+
+    if mode == "codex":
+        judge_model = (
+            cfg.get("codex_model")
+            or os.environ.get("FOCUSGROUP_JUDGE_MODEL")
+            or os.environ.get("FOCUSGROUP_CODEX_MODEL")
+        )
+        try:
+            verdict = codex_client.complete_json(prompt, _JUDGE_SCHEMA, model=judge_model)
+            passed = int(verdict.get("score", 0)) == 1
+            return OracleResult(
+                requirement_id=req.id, oracle="llm_judge", passed=passed,
+                evidence=str(verdict.get("reason", "")),
+                detail={"verdict": verdict, "model": judge_model or "codex default"},
+            )
+        except Exception as e:
+            return OracleResult(
+                requirement_id=req.id, oracle="llm_judge", passed=False,
+                evidence=f"judge error: {e!r}",
+            )
+
+    if mode not in ("anthropic", "claude"):
+        return OracleResult(
+            requirement_id=req.id, oracle="llm_judge", passed=False,
+            evidence=f"unsupported judge mode: {mode}",
+        )
+
     judge_model = cfg.get("judge_model", os.environ.get("FOCUSGROUP_JUDGE_MODEL", "claude-sonnet-4-6"))
 
     try:
         import anthropic
         client = anthropic.Anthropic()
-        prompt = (
-            "You are a binary judge for a conversational AI test. "
-            "Read the transcript, then apply the rubric. "
-            "Reply with JSON ONLY: {\"score\": 0 or 1, \"reason\": \"...\"}."
-            f"\n\nRubric:\n{rubric}\n\nTranscript:\n{transcript_text}"
-        )
         msg = client.messages.create(
             model=judge_model, max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
@@ -364,6 +392,17 @@ ORACLES: dict[str, Callable[[Path, Requirement, Scenario], OracleResult]] = {
     "trace_metric": oracle_trace_metric,
     "persona_debrief": oracle_persona_debrief,
     "llm_judge": oracle_llm_judge,
+}
+
+
+_JUDGE_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "score": {"type": "integer", "enum": [0, 1]},
+        "reason": {"type": "string"},
+    },
+    "required": ["score", "reason"],
 }
 
 

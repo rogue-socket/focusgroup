@@ -92,6 +92,7 @@ expect: "no"
 rubric: |
   <binary criterion: 1 if X, 0 otherwise>
 judge_model: "claude-sonnet-4-6"
+codex_model: ""          # optional; only used when FOCUSGROUP_JUDGE_MODE=codex
 scope: "last_n_turns"
 n: 3
 ```

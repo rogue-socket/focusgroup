@@ -6,8 +6,8 @@ Walks runs/ and produces an aggregate report:
 - diff against previous report (regressions)
 - always-fail vs sometimes-fail per requirement
 
-Cluster strategy: cheap keyword bucketing by default. If anthropic SDK is
-available and FOCUSGROUP_THEMES_MODE=anthropic, use LLM-based clustering.
+Cluster strategy: cheap keyword bucketing by default. Set
+FOCUSGROUP_THEMES_MODE=anthropic, claude, or codex for LLM-based clustering.
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from runner import codex_client
 from runner.loader import load_personas_dir
 from runner.transcript import read_state
 
@@ -60,7 +61,7 @@ def _keyword_cluster(texts: list[str], top_k: int = 8) -> list[tuple[str, int]]:
     return bag.most_common(top_k)
 
 
-def _llm_cluster(texts: list[str]) -> str:
+def _anthropic_cluster(texts: list[str]) -> str:
     try:
         import anthropic
     except ImportError:
@@ -68,19 +69,39 @@ def _llm_cluster(texts: list[str]) -> str:
     if not texts:
         return ""
     client = anthropic.Anthropic()
-    prompt = (
-        "You are synthesizing open-ended feedback from a series of user tests. "
-        "Below are quotes from different test participants. Identify 3-6 RECURRING THEMES. "
-        "For each theme, give a short label and quote 1-2 example snippets. "
-        "Be concise. No preamble.\n\n"
-        + "\n\n---\n\n".join(texts[:50])
-    )
+    prompt = _cluster_prompt(texts)
     model = os.environ.get("FOCUSGROUP_THEMES_MODEL", "claude-sonnet-4-6")
     msg = client.messages.create(
         model=model, max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
     )
     return "".join(b.text for b in msg.content if hasattr(b, "text"))
+
+
+def _codex_cluster(texts: list[str]) -> str:
+    if not texts:
+        return ""
+    prompt = _cluster_prompt(texts)
+    model = os.environ.get("FOCUSGROUP_THEMES_MODEL") or os.environ.get("FOCUSGROUP_CODEX_MODEL")
+    return codex_client.complete_text(prompt, model=model)
+
+
+def _cluster_prompt(texts: list[str]) -> str:
+    return (
+        "You are synthesizing open-ended feedback from a series of user tests. "
+        "Below are quotes from different test participants. Identify 3-6 RECURRING THEMES. "
+        "For each theme, give a short label and quote 1-2 example snippets. "
+        "Be concise. No preamble.\n\n"
+        + "\n\n---\n\n".join(texts[:50])
+    )
+
+
+def _llm_cluster(texts: list[str], mode: str) -> str:
+    if mode == "codex":
+        return _codex_cluster(texts)
+    if mode in ("anthropic", "claude"):
+        return _anthropic_cluster(texts)
+    return ""
 
 
 def report(project_dir: Path, since: datetime | None = None) -> str:
@@ -153,15 +174,15 @@ def report(project_dir: Path, since: datetime | None = None) -> str:
     mode = os.environ.get("FOCUSGROUP_THEMES_MODE", "keyword")
     out.append("## Themes from open-ended feedback")
     out.append("")
-    if mode == "anthropic":
+    if mode in ("anthropic", "claude", "codex"):
         out.append("### Pain points")
-        out.append(_llm_cluster(pain_points) or "_(no themes extracted)_")
+        out.append(_llm_cluster(pain_points, mode) or "_(no themes extracted)_")
         out.append("")
         out.append("### Stuck points")
-        out.append(_llm_cluster(stuck_points) or "_(no themes extracted)_")
+        out.append(_llm_cluster(stuck_points, mode) or "_(no themes extracted)_")
         out.append("")
         out.append("### What participants would change")
-        out.append(_llm_cluster(one_changes) or "_(no themes extracted)_")
+        out.append(_llm_cluster(one_changes, mode) or "_(no themes extracted)_")
         out.append("")
     else:
         for label, texts in (
