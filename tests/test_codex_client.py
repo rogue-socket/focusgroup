@@ -1,6 +1,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from runner import codex_client
 
 
@@ -61,3 +63,33 @@ def test_complete_text_jsonl_fallback_ignores_event_type(monkeypatch):
     monkeypatch.setattr(codex_client.subprocess, "run", fake_run)
 
     assert codex_client.complete_text("prompt") == "real text"
+
+
+def test_complete_text_error_includes_context_and_output_tails(monkeypatch):
+    def fake_run(cmd, input, text, capture_output, check):
+        return SimpleNamespace(
+            returncode=1,
+            stdout="stdout detail\n" * 500,
+            stderr="stderr detail",
+        )
+
+    monkeypatch.setenv("FOCUSGROUP_CODEX_MODEL", "gpt-test")
+    monkeypatch.setenv("FOCUSGROUP_CODEX_SANDBOX", "workspace-write")
+    monkeypatch.setenv("FOCUSGROUP_CODEX_CWD", "/tmp/project")
+    monkeypatch.setattr(codex_client.subprocess, "run", fake_run)
+
+    with pytest.raises(codex_client.CodexError) as exc:
+        codex_client.complete_text(
+            "prompt",
+            output_schema={"type": "object"},
+        )
+
+    message = str(exc.value)
+    assert "codex exec failed with exit code 1" in message
+    assert "model: gpt-test" in message
+    assert "sandbox: workspace-write" in message
+    assert "cwd: /tmp/project" in message
+    assert "output_schema: yes" in message
+    assert "stderr tail:\nstderr detail" in message
+    assert "stdout tail:" in message
+    assert "stdout detail" in message

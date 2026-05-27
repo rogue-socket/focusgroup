@@ -8,6 +8,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+_OUTPUT_TAIL_CHARS = 4_000
+
 
 class CodexError(RuntimeError):
     """Raised when the Codex CLI call fails or returns unusable output."""
@@ -61,7 +63,13 @@ def complete_text(
         )
         if proc.returncode != 0:
             raise CodexError(
-                f"codex exec failed with exit code {proc.returncode}: {proc.stderr.strip()}"
+                _failure_message(
+                    proc,
+                    model=selected_model,
+                    sandbox=sandbox,
+                    cwd=cwd,
+                    output_schema=output_schema,
+                )
             )
         if out_path.exists():
             text = out_path.read_text().strip()
@@ -92,6 +100,35 @@ def complete_json(
     if not isinstance(parsed, dict):
         raise CodexError("codex JSON output must be an object")
     return parsed
+
+
+def _failure_message(
+    proc: subprocess.CompletedProcess[str],
+    *,
+    model: str | None,
+    sandbox: str | None,
+    cwd: str | None,
+    output_schema: dict[str, Any] | None,
+) -> str:
+    parts = [
+        f"codex exec failed with exit code {proc.returncode}",
+        f"model: {model or '<default>'}",
+        f"sandbox: {sandbox or '<none>'}",
+        f"cwd: {cwd or os.getcwd()}",
+        f"output_schema: {'yes' if output_schema is not None else 'no'}",
+    ]
+    if proc.stderr.strip():
+        parts.append("stderr tail:\n" + _tail(proc.stderr))
+    if proc.stdout.strip():
+        parts.append("stdout tail:\n" + _tail(proc.stdout))
+    return "\n".join(parts)
+
+
+def _tail(text: str) -> str:
+    text = text.strip()
+    if len(text) <= _OUTPUT_TAIL_CHARS:
+        return text
+    return "..." + text[-_OUTPUT_TAIL_CHARS:]
 
 
 def _last_text_from_jsonl(stdout: str) -> str | None:
