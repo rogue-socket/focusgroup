@@ -65,6 +65,11 @@ export FOCUSGROUP_CODEX_PROFILE=           # optional Codex profile
 export FOCUSGROUP_CODEX_SANDBOX=read-only  # default for backend LLM calls
 ```
 
+When `codex exec` fails, focusgroup includes the exit code, selected model, sandbox,
+working directory, whether an output schema was used, and bounded stdout/stderr tails in
+the raised `CodexError`. That makes transient CLI failures diagnosable even when Codex
+prints useful context to stdout instead of stderr.
+
 ## Quickstart
 
 In a Claude session in your project directory:
