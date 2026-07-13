@@ -26,9 +26,17 @@ wrapped in a conversational shell). It:
 
 ## Installation
 
-This is a Claude skill. Drop the `focusgroup/` directory into your skills location and Claude
-will surface it on triggers like "test my agent", "persona test", "focus group", "dynamic eval",
-"simulate users".
+Focusgroup supports Claude Code, Codex, and GitHub Copilot through the repository adapters:
+
+| Provider | Adapter | Start instruction |
+|---|---|---|
+| Claude Code | `SKILL.md` / `CLAUDE.md` | `focusgroup init` |
+| Codex | `AGENTS.md` | `Use the focusgroup skill to test this conversational agent.` |
+| GitHub Copilot | `.github/copilot-instructions.md` | `Use the focusgroup skill in this repo to test my conversational agent.` |
+
+Claude Code can install the directory as a skill. Codex and Copilot can use a clone with their
+adapter file at the repository root. All providers use the same target-project requirements,
+personas, scenarios, and run artifacts.
 
 For the runtime:
 
@@ -69,6 +77,27 @@ When `codex exec` fails, focusgroup includes the exit code, selected model, sand
 working directory, whether an output schema was used, and bounded stdout/stderr tails in
 the raised `CodexError`. That makes transient CLI failures diagnosable even when Codex
 prints useful context to stdout instead of stderr.
+
+## Two paths: learn from fundamentals or by doing
+
+Choose the route that matches how you want to adopt focusgroup. You can switch after any run.
+
+| Path | Start here | What you learn first |
+|---|---|---|
+| **Foundations-first** (bottom-up) | Define typed requirements and their cheapest oracles, then create personas and scenarios | Why each run exists and how its result is evaluated |
+| **Practice-first** (top-down) | Run the deterministic greeting example, inspect its artifacts, then adapt one scenario to your SUT | The full loop—conversation, trace, debrief, and verdict—before the theory |
+
+For the practice-first route, run this from the repository root; it requires no API key:
+
+```bash
+FOCUSGROUP_PERSONA_MODE=stub FOCUSGROUP_JUDGE_MODE=stub \
+    python -m runner.run \
+    --project-dir examples/example-project \
+    --scenario greeting-novice-anxious
+```
+
+Then read the generated `transcript.md`, `state.json`, `trace.jsonl`, and `result.json` before
+creating your own adapter and scenario. The full workflow for both paths is in `SKILL.md`.
 
 ## Quickstart
 

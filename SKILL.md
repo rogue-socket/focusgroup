@@ -29,6 +29,48 @@ when a stubborn novice, an impatient expert, and a probing adversary actually us
 
 If the user's target isn't conversational, say so and stop.
 
+## Choose a path
+
+When a user is new to focusgroup, offer these two routes before choosing the first command.
+Do not infer the route from seniority: someone experienced with agents may still want the
+bottom-up explanation, and someone new may learn better from a successful first run.
+
+| Path | Shape | First outcome |
+|---|---|---|
+| **Foundations-first** | Bottom-up: requirements → oracle choice → personas → scenarios → run → themes | A small, traceable test plan whose requirements and oracles are understood before execution |
+| **Practice-first** | Top-down: run the deterministic greeting example → inspect artifacts → adapt one scenario to the user's SUT → fill in the missing requirements and coverage | One real run and its transcript, state, trace, and result files |
+
+If the user says they want to understand evaluation design, is defining a new product, or is
+worried about safety/correctness coverage, suggest **foundations-first**. If they want to see
+the tool work, already have a conversational SUT, or ask for a quick smoke test, suggest
+**practice-first**. The user can switch at any command boundary.
+
+### Foundations-first (bottom-up)
+
+1. Explain the five requirement types using the user's product, then create or review
+   `requirements.md` with at least one requirement and the cheapest suitable oracle.
+2. Explain persona axes, then create a small pool with deliberately different competence,
+   patience, and adversariality.
+3. Create one scenario that names requirement IDs and explicit loop bounds.
+4. Scaffold the adapter, run that one scenario, and inspect its `result.json` against the
+   requirement before adding more scenarios or generating themes.
+
+### Practice-first (top-down, teaching by doing)
+
+1. Run the deterministic greeting example first. It requires no API key:
+
+   ```bash
+   FOCUSGROUP_PERSONA_MODE=stub FOCUSGROUP_JUDGE_MODE=stub \
+       python -m runner.run --project-dir examples/example-project --scenario greeting-novice-anxious
+   ```
+
+2. Open the resulting `transcript.md`, `state.json`, `trace.jsonl`, and `result.json`. Explain
+   each file only after the learner has seen it in a real run.
+3. Copy the smallest relevant adapter template into the user's project, create one scenario for
+   one requirement, and run it at `--n 1`.
+4. Backfill the requirement categories, persona pool, and scenario coverage through the normal
+   `init` and `add-feature` flow. Do not treat one passing smoke run as a complete eval suite.
+
 ## The four commands
 
 This skill orchestrates four operations. When the user invokes focusgroup, identify which command
@@ -103,7 +145,7 @@ Flags:
 
 Implementation:
 1. Resolve scenarios via flags. Show the user the resolved list + cost estimate. Confirm.
-2. Invoke `python -m runner.run --scenarios <ids>`.
+2. Invoke `python -m runner.run --scenario <ids>`.
 3. For each scenario:
    - Create `runs/<timestamp>-<scenario-id>/`
    - Run `persona_loop.py`, which alternates persona turn → adapter turn until a loop bound trips
@@ -130,6 +172,20 @@ See the reference docs for full schemas:
 - [reference/adapter-protocol.md](reference/adapter-protocol.md)
 - [reference/oracle-strategies.md](reference/oracle-strategies.md)
 - [reference/debrief-template.md](reference/debrief-template.md)
+
+## Learning and operating references
+
+Load only the reference needed by the selected path or current command:
+
+- `references/curriculum.md` — foundations-first evaluation syllabus
+- `references/practical-mode.md` — practice-first smoke-to-suite workflow
+- `references/exercise-bank.md` — small artifact-based practice tasks
+- `references/incidents.md` — common evaluation failure mechanisms
+- `references/theory-modes.md` — explain, trace-walk, Socratic, build, and review modes
+- `references/session-control.md` — target-project resume, checkpoint, and pause rules
+- `references/spaced-repetition.md` — regression rerun cadence
+- `references/anti-patterns-with-examples.md` — paired evaluation failure patterns
+- `references/host-adapters.md` — Claude Code, Codex, and GitHub Copilot entry rules
 
 ### Persona axes (NOT demographics)
 
